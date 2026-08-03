@@ -192,8 +192,17 @@ function setupDrawingCanvas() {
     const imageData = canvas.toDataURL('image/png');
     socket.emit('submit_drawing', { imageData });
 
-    document.getElementById('submitBtn').disabled = true;
-    document.getElementById('submitBtn').textContent = 'Submitting...';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    
+    // Failsafe: if no response from server in 15 seconds, reset button
+    setTimeout(() => {
+      if (btn.textContent === 'Submitting...') {
+        btn.disabled = false;
+        btn.textContent = 'Try Again (Network Error)';
+      }
+    }, 15000);
   });
 }
 
@@ -400,6 +409,14 @@ function setupSocketListeners() {
     showMessage('joinMessage', data.message, 'error');
     document.getElementById('joinBtn').disabled = false;
     document.getElementById('joinBtn').textContent = 'Join Game';
+    
+    // Also reset submit button if it's stuck during drawing
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Art';
+    }
+    alert("Error: " + data.message); // Alert the user on any screen
   });
 
   // Room closed
@@ -416,6 +433,19 @@ document.getElementById('bid100Btn').addEventListener('click', () => {
 
 document.getElementById('bid500Btn').addEventListener('click', () => {
   socket.emit('place_bid', { amount: 500 });
+});
+
+document.getElementById('bid1000Btn').addEventListener('click', () => {
+  socket.emit('place_bid', { amount: 1000 });
+});
+
+document.getElementById('customBidBtn').addEventListener('click', () => {
+  const customAmountStr = document.getElementById('customBidAmount').value;
+  const customTotal = parseInt(customAmountStr, 10);
+  if (!isNaN(customTotal) && customTotal > 0) {
+    socket.emit('place_bid', { totalBid: customTotal });
+    document.getElementById('customBidAmount').value = '';
+  }
 });
 
 /**

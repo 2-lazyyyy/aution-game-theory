@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Boðbjánar - Player</title>
+  <title>Nash Auction - Player</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,7 +17,7 @@
   <div class="player-container">
     <!-- Header -->
     <header class="player-header">
-      <h1>BOÐBJÁNAR</h1>
+      <h1>NASH AUCTION</h1>
     </header>
 
     <!-- Join Screen -->
@@ -156,9 +156,14 @@
           <div class="cash-display" id="playerCash">$5000</div>
         </div>
 
-        <div class="bid-buttons">
-          <button class="btn btn-primary" id="bid100Btn">Bid +$100</button>
-          <button class="btn btn-secondary" id="bid500Btn">Bid +$500</button>
+        <div class="bid-buttons" style="display: flex; gap: var(--space-xs); margin-bottom: var(--space-sm);">
+          <button class="btn btn-primary" id="bid100Btn" style="flex: 1; padding: 0.75rem 0.5rem; font-size: 0.9rem;">+$100</button>
+          <button class="btn btn-secondary" id="bid500Btn" style="flex: 1; padding: 0.75rem 0.5rem; font-size: 0.9rem;">+$500</button>
+          <button class="btn btn-secondary" id="bid1000Btn" style="flex: 1; padding: 0.75rem 0.5rem; font-size: 0.9rem; border-color: var(--auction-gold); color: var(--auction-gold);">+$1000</button>
+        </div>
+        <div class="custom-bid-container" style="display: flex; gap: var(--space-xs);">
+          <input type="number" id="customBidAmount" placeholder="Total Bid (e.g. 2500)" style="flex: 2; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.75rem; background: var(--bg-color); color: var(--text-color); font-family: var(--font-primary); font-size: 1rem;">
+          <button class="btn btn-primary" id="customBidBtn" style="flex: 1; background-color: var(--auction-gold); color: #000; font-weight: bold;">BID</button>
         </div>
       </div>
     </div>

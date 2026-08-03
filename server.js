@@ -13,6 +13,8 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
+  pingInterval: 10000, // Send ping every 10 seconds to keep connection alive
+  pingTimeout: 60000,  // Wait 60 seconds before deciding the player is disconnected
   cors: {
     origin: process.env.CORS_ORIGIN || "*",
     methods: ["GET", "POST"]
@@ -20,7 +22,7 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const MAX_IMAGE_SIZE = 200 * 1024; // 200KB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -353,7 +355,7 @@ io.on('connection', (socket) => {
   });
 
   // Player places a bid
-  socket.on('place_bid', ({ amount }) => {
+  socket.on('place_bid', ({ amount, totalBid }) => {
     const roomCode = socket.roomCode;
 
     if (!roomCode || !rooms[roomCode]) {
@@ -368,7 +370,14 @@ io.on('connection', (socket) => {
 
     const player = rooms[roomCode].players[socket.id];
     const auctionState = rooms[roomCode].auctionState;
-    const newBid = auctionState.currentBid + amount;
+    
+    let newBid;
+    if (totalBid !== undefined) {
+      newBid = totalBid;
+      amount = newBid - auctionState.currentBid;
+    } else {
+      newBid = auctionState.currentBid + amount;
+    }
 
     // Validate player has enough cash
     if (player.cash < newBid) {
@@ -476,10 +485,18 @@ function startAuctionRound(roomCode) {
   Object.keys(room.players).forEach(playerId => {
     const isArtist = playerId === currentArt.artistSocketId;
 
-    // Generate hint: for non-artists, show the prompt + value
+    // Generate hint: for non-artists, show the prompt + estimated value range
     let hint = null;
     if (!isArtist) {
-      hint = `${currentArt.prompt} is worth $${currentArt.trueValue}`;
+      // Calculate a random range around the true value (e.g. +/- 10% to 30%)
+      const variancePercent = 0.1 + (Math.random() * 0.2);
+      const variance = Math.floor(currentArt.trueValue * variancePercent);
+      
+      // Round to nearest 50 for cleaner numbers
+      let minEstimate = Math.max(50, Math.floor((currentArt.trueValue - variance) / 50) * 50);
+      let maxEstimate = Math.ceil((currentArt.trueValue + variance) / 50) * 50;
+      
+      hint = `Appraised Value: $${minEstimate} - $${maxEstimate}`;
     }
 
     io.to(playerId).emit('start_auction_round', {
@@ -555,8 +572,8 @@ function endAuctionRound(roomCode) {
   console.log(`Auction round ended in room ${roomCode}`);
 
   if (winnerId && room.players[winnerId]) {
-    // Deduct cash from winner
-    room.players[winnerId].cash -= finalPrice;
+    // Deduct cash from winner and add true value (instant flip)
+    room.players[winnerId].cash = room.players[winnerId].cash - finalPrice + currentArt.trueValue;
 
     // Add artwork to winner's inventory
     room.players[winnerId].inventory.push(currentArt);
@@ -609,7 +626,7 @@ function endAuction(roomCode) {
   // Calculate final scores
   const results = Object.values(room.players).map(player => {
     const portfolioValue = player.inventory.reduce((sum, art) => sum + art.trueValue, 0);
-    const netWorth = player.cash + portfolioValue;
+    const netWorth = player.cash; // Cash already includes the profit from artworks
 
     return {
       name: player.name,
