@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev:server": "nodemon server.js",
+    "dev:client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build": "npm run build --prefix client"
   },
   "repository": {
     "type": "git",
@@ -26,6 +29,7 @@
     "socket.io": "^4.6.1"
   },
   "devDependencies": {
+    "concurrently": "^10.0.4",
     "nodemon": "^3.0.1"
   }
 }
