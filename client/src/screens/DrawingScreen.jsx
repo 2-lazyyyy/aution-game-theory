@@ -86,8 +86,15 @@ const DrawingScreen = ({ prompts, setGameState }) => {
 
   const handleSubmit = () => {
     setIsSubmitting(true);
-    // Convert SVG to PNG Base64 to send to server
     const svgElement = svgRef.current;
+    
+    // Explicitly set width, height and xmlns for proper rasterization
+    svgElement.setAttribute('width', svgElement.clientWidth);
+    svgElement.setAttribute('height', svgElement.clientHeight);
+    if (!svgElement.getAttribute('xmlns')) {
+      svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+
     const svgData = new XMLSerializer().serializeToString(svgElement);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -96,7 +103,6 @@ const DrawingScreen = ({ prompts, setGameState }) => {
     canvas.width = svgElement.clientWidth;
     canvas.height = svgElement.clientHeight;
     
-    // Fill white background
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
@@ -105,7 +111,6 @@ const DrawingScreen = ({ prompts, setGameState }) => {
       const imageData = canvas.toDataURL('image/png');
       socket.emit('submit_drawing', { imageData });
       
-      // Failsafe
       setTimeout(() => {
           setIsSubmitting(false);
       }, 15000);
@@ -117,17 +122,22 @@ const DrawingScreen = ({ prompts, setGameState }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-      className="w-full max-w-md mt-4 flex flex-col h-[85vh]"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+      className="w-full max-w-lg mt-4 flex flex-col h-[85vh] relative"
     >
-      <div className="glass-panel p-4 rounded-t-2xl text-center">
-        <p className="text-sm font-semibold text-gray-500 uppercase">Draw This ({currentPromptIndex + 1}/2)</p>
-        <h2 className="text-2xl font-bold font-accent mt-1 text-charcoal">{prompt}</h2>
+      <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-indigo-500/20 rounded-3xl blur-xl opacity-50 pointer-events-none"></div>
+      
+      <div className="glass-card p-5 rounded-t-3xl text-center border-b-0 relative z-10">
+        <div className="inline-block bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full mb-2">
+          <p className="text-xs font-bold text-amber-400 uppercase tracking-[0.2em]">Commission {currentPromptIndex + 1}/2</p>
+        </div>
+        <h2 className="text-2xl font-bold font-accent mt-1 text-white tracking-wide">{prompt}</h2>
       </div>
 
-      <div className="flex-1 bg-white relative overflow-hidden shadow-inner border-x border-gray-200 touch-none">
+      <div className="flex-1 bg-slate-50 relative overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.1)] border-x-4 border-slate-700 touch-none z-10">
         <svg
           ref={svgRef}
           onPointerDown={handlePointerDown}
@@ -153,21 +163,24 @@ const DrawingScreen = ({ prompts, setGameState }) => {
         </svg>
       </div>
 
-      <div className="glass-panel p-4 rounded-b-2xl flex gap-4">
-        <button 
+      <div className="glass-card p-5 rounded-b-3xl flex gap-4 border-t-0 relative z-10">
+        <motion.button 
+          whileTap={{ scale: 0.95 }}
           onClick={clearCanvas} 
           disabled={isSubmitting}
-          className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+          className="flex-1 bg-slate-800 text-slate-300 border border-slate-600 py-3 rounded-xl font-semibold hover:bg-slate-700 hover:text-white transition uppercase tracking-wider text-sm"
         >
           Clear
-        </button>
-        <button 
+        </motion.button>
+        <motion.button 
+          whileHover={(!isSubmitting && (lines.length > 0 || currentLine)) ? { scale: 1.05 } : {}}
+          whileTap={(!isSubmitting && (lines.length > 0 || currentLine)) ? { scale: 0.95 } : {}}
           onClick={handleSubmit} 
           disabled={isSubmitting || (lines.length === 0 && !currentLine)}
-          className="flex-2 bg-charcoal text-white py-3 px-6 rounded-lg font-semibold hover:bg-black transition disabled:opacity-50 min-w-[140px]"
+          className="flex-2 bg-gradient-to-r from-amber-600 to-amber-500 text-slate-900 py-3 px-6 rounded-xl font-bold hover:from-amber-500 hover:to-amber-400 transition-all disabled:opacity-50 min-w-[150px] shadow-[0_0_15px_rgba(245,158,11,0.3)] uppercase tracking-wider"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Art'}
-        </button>
+        </motion.button>
       </div>
     </motion.div>
   );

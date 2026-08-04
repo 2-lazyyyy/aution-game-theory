@@ -22,7 +22,7 @@
     "art",
     "party-game"
   ],
-  "author": "Boðbjánar Contributors",
+  "author": "Nash Auction Contributors",
   "license": "MIT",
   "dependencies": {
     "express": "^5.2.1",

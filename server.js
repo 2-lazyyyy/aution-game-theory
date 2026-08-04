@@ -1,5 +1,5 @@
 /**
- * Boðbjánar - Multiplayer Art Auction Game Server
+ * Nash Auction - Multiplayer Art Auction Game Server
  *
  * This server handles room creation, player management, drawing phases,
  * and real-time auction logic using Socket.io.
@@ -587,17 +587,27 @@ function endAuctionRound(roomCode) {
     console.log(`No bids placed for artwork ${currentArt.id}`);
   }
 
-  // Broadcast round result
-  io.to(roomCode).emit('round_result', {
-    artwork: {
-      imageData: currentArt.imageData,
-      artistName: currentArt.artistName,
-      trueValue: currentArt.trueValue
-    },
-    soldTo: winnerId ? room.players[winnerId].name : null,
-    soldPrice: finalPrice,
-    profit: winnerId ? (currentArt.trueValue - finalPrice) : 0
+  // Broadcast round result individually to players so they get their specific profit/net worth
+  Object.keys(room.players).forEach(playerId => {
+    const isWinner = playerId === winnerId;
+    const playerProfit = isWinner ? (currentArt.trueValue - finalPrice) : 0;
+
+    io.to(playerId).emit('round_result', {
+      artwork: {
+        imageData: currentArt.imageData,
+        artistName: currentArt.artistName,
+        trueValue: currentArt.trueValue,
+        prompt: currentArt.prompt,
+        soldToName: winnerId ? room.players[winnerId].name : null,
+        soldPrice: finalPrice
+      },
+      profit: playerProfit,
+      newNetWorth: room.players[playerId].cash
+    });
   });
+
+  // Send to host as well
+  io.to(room.hostSocketId).emit('round_result');
 
   // Move to next artwork after a delay
   setTimeout(() => {
@@ -608,7 +618,7 @@ function endAuctionRound(roomCode) {
     } else {
       endAuction(roomCode);
     }
-  }, 5000); // 5 second delay to show results
+  }, 7000); // 7 second delay to show results (increased slightly so players can read)
 }
 
 /**
@@ -629,11 +639,13 @@ function endAuction(roomCode) {
     const netWorth = player.cash; // Cash already includes the profit from artworks
 
     return {
+      id: player.socketId,
+      avatar: player.avatar,
       name: player.name,
       cash: player.cash,
       portfolioValue: portfolioValue,
       netWorth: netWorth,
-      artworkCount: player.inventory.length
+      artworksWon: player.inventory.length
     };
   });
 
@@ -641,14 +653,14 @@ function endAuction(roomCode) {
   results.sort((a, b) => b.netWorth - a.netWorth);
 
   io.to(roomCode).emit('game_over', {
-    results: results,
+    scores: results,
     artworks: room.artworks
   });
 }
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`Boðbjánar server running on port ${PORT}`);
+  console.log(`Nash Auction server running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT}/host.html to host a game`);
   console.log(`Visit http://localhost:${PORT} to join as a player`);
 });
